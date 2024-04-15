@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galeria de Imagens</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        label {
+            display: block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        label:hover {
+            background-color: #45a049;
+        }
+
+        #container-imagens {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .imagem-container {
+            position: relative;
+        }
+
+        .imagem {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-remover {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-remover:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <input type="file" id="input-imagem" accept="image/*">
+        <label for="input-imagem">Adicionar Imagem</label>
+        <div id="container-imagens"></div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('container-imagens');
+            const input = document.getElementById('input-imagem');
+            let imagesData = [];
+            const MAX_IMAGES = 5; // Limite máximo de imagens
+
+            // Função para adicionar uma imagem ao DOM e ao Local Storage
+            function addImageToGallery(imageId, imageUrl) {
+                return new Promise((resolve, reject) => {
+                    if (imagesData.length >= MAX_IMAGES) {
+                        alert('Você atingiu o limite máximo de imagens.');
+                        reject();
+                    } else {
+                        const imageContainer = document.createElement('div');
+                        imageContainer.classList.add('imagem-container');
+
+                        const imageElement = document.createElement('img');
+                        imageElement.src = imageUrl;
+                        imageElement.setAttribute('data-id', imageId);
+                        imageElement.classList.add('imagem');
+
+                        const removeButton = document.createElement('button');
+                        removeButton.innerHTML = 'X';
+                        removeButton.classList.add('btn-remover');
+                        removeButton.addEventListener('click', function() {
+                            removeImage(imageId);
+                        });
+
+                        imageContainer.appendChild(removeButton); // Adiciona o botão antes da imagem
+                        imageContainer.appendChild(imageElement);
+                        container.appendChild(imageContainer);
+                        imagesData.push({ id: imageId, src: imageUrl }); // Adiciona ao array de imagens
+                        resolve();
+                    }
+                });
+            }
+
+            // Função para remover uma imagem do DOM e do Local Storage
+            function removeImage(imageId) {
+                const imageContainer = document.querySelector(`.imagem-container img[data-id="${imageId}"]`).parentNode;
+                imageContainer.remove();
+
+                // Atualizar array de imagens removendo a imagem
+                imagesData = imagesData.filter(image => image.id !== imageId);
+                localStorage.setItem('images', JSON.stringify(imagesData)); // Atualiza o Local Storage
+            }
+
+            // Carregar imagens previamente armazenadas no Local Storage
+            function loadImagesFromLocalStorage() {
+                return new Promise((resolve, reject) => {
+                    const storedImages = localStorage.getItem('images');
+                    if (storedImages) {
+                        imagesData = JSON.parse(storedImages);
+                        const promises = imagesData.map(image => addImageToGallery(image.id, image.src));
+                        Promise.all(promises).then(() => {
+                            resolve();
+                        });
+                    } else {
+                        resolve();
+                    }
+                });
+            }
+
+            // Evento de clique no botão de adicionar imagem
+            input.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        const imageUrl = reader.result;
+                        const imageId = 'img-' + Date.now();
+                        addImageToGallery(imageId, imageUrl).then(() => {
+                            // Atualizar Local Storage com a nova imagem
+                            localStorage.setItem('images', JSON.stringify(imagesData));
+                        }).catch(() => {
+                            // Limpa o input de arquivo se o limite de imagens for atingido
+                            input.value = '';
+                        });
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Carregar imagens ao iniciar a página
+            loadImagesFromLocalStorage();
+        });
+    </script>
+</body>
+</html>
